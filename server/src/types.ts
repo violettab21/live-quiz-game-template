@@ -67,5 +67,5 @@ export interface AnswerData {
 }
 
 export interface ModifiedWebSocket extends WebSocket {
-  userId: string | undefined;
+  userId?: string | undefined;
 }

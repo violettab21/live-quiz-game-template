@@ -1,19 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { Game, Question } from "../types";
+import { Game, ModifiedWebSocket, Player, Question } from "../types";
 
 interface GamesStorage {
   games: Game[];
   addGame(questions: Question[], hostId: string): Game;
+  findGame(code: string): Game | undefined;
+  addPlayer(player: Player, gameId: string): void;
+  findGameById(id: string): Game | undefined;
 }
 
 export const gamesStorage: GamesStorage = {
   games: [],
   addGame(questions, hostId) {
     const gameId = randomUUID();
-    const code = generateCode(); //logic to generate random code
+    const code = generateCode();
     const mapPlaceholder = new Map();
-
-    return {
+    const game: Game = {
       id: gameId,
       code: code,
       hostId: hostId,
@@ -23,6 +25,22 @@ export const gamesStorage: GamesStorage = {
       status: "waiting",
       playerAnswers: mapPlaceholder,
     };
+    this.games.push(game);
+    console.log(this.games);
+    return game;
+  },
+  findGame(code: string) {
+    return this.games.find(
+      (game: Game) => game.code.toLowerCase() === code.toLocaleLowerCase(),
+    );
+  },
+  findGameById(id: string) {
+    return this.games.find((game: Game) => game.id === id);
+  },
+  addPlayer(player: Player, gameId: string) {
+    const game = this.games.find((game) => game.id === gameId);
+
+    game?.players.push(player);
   },
 };
 

@@ -1,7 +1,15 @@
 import { WebSocketServer } from "ws";
-import { CreateGameData, ModifiedWebSocket, RegData, WSMessage } from "./types";
+import {
+  CreateGameData,
+  Game,
+  JoinGameData,
+  ModifiedWebSocket,
+  RegData,
+  WSMessage,
+} from "./types";
 import { usersStorage } from "./db/users";
 import { gamesStorage } from "./db/games";
+import { playersStorage } from "./db/players";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
@@ -14,7 +22,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
     const { type, data } = JSON.parse(msg.toString()) as WSMessage;
     switch (type) {
       case "reg": {
-        const res = register(data);
+        const res = register(data, ws);
         ws.send(JSON.stringify(res));
         ws.userId = res.data.index;
         break;
@@ -24,13 +32,38 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
         ws.send(JSON.stringify(res));
         break;
       }
+      case "join_game": {
+        const res = joinGame(data, ws);
+        ws.send(JSON.stringify(prepareMessageForPlayerJoined(res)));
+        if (res) {
+          const gameId = res.game.id;
+          wss.clients.forEach((client: ModifiedWebSocket) => {
+            const game = res.game;
+            const userIndex = client.userId;
+            const dataToShare = prepareMessageForOtherPlayers(res);
+            const dataPlayers = prepareMessageForWithPlayersData(res);
+            if (userIndex === game.hostId) {
+              client.send(JSON.stringify(dataToShare));
+              client.send(JSON.stringify(dataPlayers));
+            }
+            game.players.forEach((player) => {
+              if (player.ws === client) {
+                client.send(JSON.stringify(dataToShare));
+                client.send(JSON.stringify(dataPlayers));
+              }
+            });
+          });
+        }
+
+        break;
+      }
     }
   });
 
   ws.on("error", console.error);
 });
 
-function register(data: RegData): WSMessage {
+function register(data: RegData, ws: ModifiedWebSocket): WSMessage {
   if (!data.name || !data.password) {
     return {
       type: "reg",
@@ -42,7 +75,7 @@ function register(data: RegData): WSMessage {
     };
   }
   const { name, password } = data;
-  const index = usersStorage.addUser(name, password);
+  const index = usersStorage.addUser(name, password, ws);
   return {
     type: "reg",
     data: {
@@ -73,6 +106,121 @@ function createGame(data: CreateGameData, hostId: string | undefined) {
     data: {
       gameId: id,
       code: code,
+    },
+    id: 0,
+  };
+}
+
+function joinGame(data: JoinGameData, ws: ModifiedWebSocket) {
+  const { code } = data;
+  console.log(code);
+  const game = gamesStorage.findGame(code);
+  console.log(game);
+  if (game) {
+    const userIndex = ws.userId;
+    if (userIndex) {
+      const user = usersStorage.findUser(userIndex);
+      if (user) {
+        const player = {
+          name: user?.name,
+          index: user?.index,
+          score: 0,
+          ws: user.ws,
+        };
+        playersStorage.addPlayer(player);
+        gamesStorage.addPlayer(player, game.id);
+
+        return {
+          game: game,
+          playerName: user.name,
+          playersCount: game.players.length,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function prepareMessageForPlayerJoined(
+  res: {
+    game: Game;
+    playerName: string;
+    playersCount: number;
+  } | null,
+) {
+  if (res) {
+    return {
+      type: "game_joined",
+      data: {
+        gameId: res.game.id,
+      },
+      id: 0,
+    };
+  }
+  return {
+    type: "error",
+    data: {
+      error: true,
+      errorText: "Unable to add game player",
+    },
+    id: 0,
+  };
+}
+
+function prepareMessageForOtherPlayers(
+  res: {
+    game: Game;
+    playerName: string;
+    playersCount: number;
+  } | null,
+) {
+  if (res) {
+    return {
+      type: "player_joined",
+      data: {
+        playerName: res.playerName,
+        playersCount: res.playersCount,
+      },
+      id: 0,
+    };
+  }
+  return {
+    type: "error",
+    data: {
+      error: true,
+      errorText: "Unable to add game player",
+    },
+    id: 0,
+  };
+}
+
+function prepareMessageForWithPlayersData(
+  res: {
+    game: Game;
+    playerName: string;
+    playersCount: number;
+  } | null,
+) {
+  if (res) {
+    const players = res.game.players.map((player) => {
+      return {
+        name: player.name,
+        index: player.index,
+        score: player.score,
+      };
+    });
+
+    return {
+      type: "update_players",
+      data: players,
+      id: 0,
+    };
+  }
+  return {
+    type: "error",
+    data: {
+      error: true,
+      errorText: "Unable to get players",
     },
     id: 0,
   };
