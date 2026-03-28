@@ -14,10 +14,8 @@ import {
   sendMessageToPlayers,
   startGame,
   getQuestionResults,
-  isNextQuestionPresent,
-  getNextQuestion,
-  finishGameMessage,
   proceedGame,
+  removeDisconnectedUserFromGames,
 } from "./messages/messages";
 import { usersStorage } from "./db/users";
 
@@ -58,7 +56,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
           );
           setTimeout(() => {
             sendMessageToPlayers(
-              JSON.stringify(getUpdatePlayersMessage(res)),
+              JSON.stringify(getUpdatePlayersMessage(res.game)),
               game,
               wss,
             );
@@ -117,6 +115,13 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
       }
     }
   });
+  ws.on("close", () => {
+    const userId = ws.userId;
 
+    if (userId) {
+      console.log("Client disconnected", userId);
+      removeDisconnectedUserFromGames(userId, wss);
+    }
+  });
   ws.on("error", console.error);
 });

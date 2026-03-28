@@ -7,6 +7,7 @@ interface GamesStorage {
   findGame(code: string): Game | undefined;
   addPlayer(player: Player, gameId: string): void;
   findGameById(id: string): Game | undefined;
+  removePlayer(gameId: string, userId: string): void;
 }
 
 export const gamesStorage: GamesStorage = {
@@ -41,6 +42,15 @@ export const gamesStorage: GamesStorage = {
     const game = this.games.find((game) => game.id === gameId);
     if (game) {
       game.players.push(player);
+    }
+  },
+  removePlayer(gameId: string, userId: string) {
+    const index = this.games.findIndex((game) => game.id === gameId);
+    if (index !== -1) {
+      const updatedPlayers = this.games[index].players.filter(
+        (player) => player.index !== userId,
+      );
+      this.games[index].players = updatedPlayers;
     }
   },
 };

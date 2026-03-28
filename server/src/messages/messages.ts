@@ -108,6 +108,7 @@ export function joinGame(data: JoinGameData, ws: ModifiedWebSocket) {
           existingPlayer.answeredCorrectly = false;
           existingPlayer.hasAnswered = false;
           existingPlayer.score = 0;
+          existingPlayer.ws = ws;
           gamesStorage.addPlayer(existingPlayer, game.id);
         } else {
           const player = {
@@ -184,37 +185,29 @@ export function getPlayerJoinedMessage(
   };
 }
 
-export function getUpdatePlayersMessage(
-  res: {
-    game: Game;
-    playerName: string;
-    playersCount: number;
-  } | null,
-) {
-  if (res) {
-    const players = res.game.players.map((player) => {
-      return {
-        name: player.name,
-        index: player.index,
-        score: player.score,
-      };
-    });
-
+export function getUpdatePlayersMessage(game: Game) {
+  const players = game.players.map((player) => {
     return {
-      type: "update_players",
-      data: players,
-      id: 0,
+      name: player.name,
+      index: player.index,
+      score: player.score,
     };
-  }
+  });
+
   return {
+    type: "update_players",
+    data: players,
+    id: 0,
+  };
+}
+/*return {
     type: "error",
     data: {
       error: true,
       errorText: "Unable to update players list",
     },
     id: 0,
-  };
-}
+  };*/
 
 export function startGame(data: StartGameData) {
   const { gameId } = data;
@@ -280,7 +273,9 @@ export function processAnswer(data: AnswerData, ws: ModifiedWebSocket) {
   const game = gamesStorage.findGameById(gameId);
 
   if (game && game?.questionStartTime) {
-    const player = playersStorage.players.find((player) => player.ws === ws);
+    const player = playersStorage.players.find(
+      (player) => player.index === ws.userId,
+    );
     if (player) {
       player.hasAnswered = true;
       player.answeredCorrectly =
@@ -434,4 +429,24 @@ function updateScore(game: Game) {
   });
   console.log("Updated Score", resPlayers);
   return resPlayers;
+}
+
+export function removeDisconnectedUserFromGames(
+  userId: string,
+  wss: Server<typeof WebSocket, typeof IncomingMessage>,
+) {
+  const games = gamesStorage.games.filter(
+    (game) =>
+      (game.status === "waiting" || game.status === "in_progress") &&
+      game.players.find((player) => player.index === userId),
+  );
+  if (games.length > 0) {
+    games.forEach((game) => {
+      gamesStorage.removePlayer(game.id, userId);
+      console.log("After remove");
+      console.log(gamesStorage.findGameById(game.id));
+      const message = JSON.stringify(getUpdatePlayersMessage(game));
+      sendMessageToPlayers(message, game, wss);
+    });
+  }
 }
