@@ -39,8 +39,9 @@ export const gamesStorage: GamesStorage = {
   },
   addPlayer(player: Player, gameId: string) {
     const game = this.games.find((game) => game.id === gameId);
-
-    game?.players.push(player);
+    if (game) {
+      game.players.push(player);
+    }
   },
 };
 
