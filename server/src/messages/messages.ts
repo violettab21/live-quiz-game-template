@@ -408,21 +408,22 @@ export function proceedGame(
 
 function updateScore(game: Game) {
   const { players } = game;
-  const sortedPlayersByTime = players
-    .filter((player) => player.answeredCorrectly)
-    .sort((a, b) => (b.answerTime || 0) - (a.answerTime || 0));
-  console.log("sorted by time", sortedPlayersByTime);
+  const timeLimit = game.questions[game.currentQuestion - 1].timeLimitSec;
+
   const resPlayers = players.map((player) => {
     let earned = 0;
-    if (player.answeredCorrectly) {
-      const timeBonus = sortedPlayersByTime.findIndex(
-        (pl) => pl.index === player.index,
+    if (player.answeredCorrectly && player.answerTime) {
+      const basePoints = 1;
+      const timeBonus = Number(
+        (
+          basePoints *
+          ((timeLimit - player.answerTime / 1000) / timeLimit)
+        ).toFixed(1),
       );
-      earned = timeBonus + 1;
-      player.score += earned;
-    } else {
-      player.score += earned;
+
+      earned = timeBonus + basePoints;
     }
+    player.score = Number((player.score + earned).toFixed(1));
     return {
       name: player.name,
       answered: player.hasAnswered || false,
