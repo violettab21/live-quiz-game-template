@@ -92,22 +92,33 @@ export function createGame(data: CreateGameData, hostId: string | undefined) {
 
 export function joinGame(data: JoinGameData, ws: ModifiedWebSocket) {
   const { code } = data;
-  console.log(code);
+  console.log("Game code", code);
   const game = gamesStorage.findGame(code);
-  console.log(game);
+  console.log("current game", game);
   if (game) {
     const userIndex = ws.userId;
     if (userIndex) {
       const user = usersStorage.findUser(userIndex);
       if (user) {
-        const player = {
-          name: user.name,
-          index: user.index,
-          score: 0,
-          ws: user.ws,
-        };
-        playersStorage.addPlayer(player);
-        gamesStorage.addPlayer(player, game.id);
+        const existingPlayer = playersStorage.players.find(
+          (player) => player.index === user.index,
+        );
+        if (existingPlayer) {
+          existingPlayer.answerTime = 0;
+          existingPlayer.answeredCorrectly = false;
+          existingPlayer.hasAnswered = false;
+          existingPlayer.score = 0;
+          gamesStorage.addPlayer(existingPlayer, game.id);
+        } else {
+          const player = {
+            name: user.name,
+            index: user.index,
+            score: 0,
+            ws: user.ws,
+          };
+          playersStorage.addPlayer(player);
+          gamesStorage.addPlayer(player, game.id);
+        }
 
         return {
           game: game,
@@ -255,7 +266,7 @@ export function sendMessageToPlayers(
       console.log(message);
     }
     game.players.forEach((player) => {
-      if (player.ws === client) {
+      if (player.index === client.userId) {
         client.send(message);
         console.log("send message to player");
         console.log(message);
@@ -305,15 +316,7 @@ export function getQuestionResults(game: Game) {
     correct: boolean;
     pointsEarned: number;
     totalScore: number;
-  }[] = game.players.map((player) => {
-    return {
-      name: player.name,
-      answered: player.hasAnswered || false,
-      correct: player.answeredCorrectly || false,
-      pointsEarned: 1,
-      totalScore: player.score + 1,
-    };
-  });
+  }[] = updateScore(game);
   return {
     type: "question_result",
     data: {
@@ -327,8 +330,107 @@ export function getQuestionResults(game: Game) {
 
 export function checkAllPlayersAnswered(game: Game) {
   console.log("All answered");
-  console.log(game.players);
-  console.log(game.players.find((player) => !player.hasAnswered));
+  console.log("game players", game.players);
 
   return game.players.find((player) => !player.hasAnswered) ? false : true;
+}
+
+export function isNextQuestionPresent(game: Game) {
+  const { currentQuestion } = game;
+  if (game.questions[currentQuestion]) {
+    return true;
+  }
+  return false;
+}
+
+export function getNextQuestion(game: Game) {
+  game.currentQuestion += 1;
+  game.questionStartTime = Date.now();
+  game.playerAnswers = new Map();
+  game.players.forEach((player) => {
+    player.answerTime = 0;
+    player.answeredCorrectly = false;
+    player.hasAnswered = false;
+  });
+  return getCurrentQuestion(game);
+}
+
+export function finishGameMessage(game: Game) {
+  game.status = "finished";
+  const gameResults = game.players
+    .map((player) => {
+      return {
+        name: player.name,
+        score: player.score,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((item, index) => {
+      return {
+        ...item,
+        rank: index + 1,
+      };
+    });
+
+  return {
+    type: "game_finished",
+    data: {
+      scoreboard: gameResults,
+    },
+    id: 0,
+  };
+}
+
+export function proceedGame(
+  game: Game,
+  wss: Server<typeof WebSocket, typeof IncomingMessage>,
+) {
+  const timeLimit = game.questions[game.currentQuestion - 1].timeLimitSec;
+  setTimeout(() => {
+    if (isNextQuestionPresent(game)) {
+      sendMessageToPlayers(JSON.stringify(getNextQuestion(game)), game, wss);
+      game.questionTimer = setTimeout(() => {
+        {
+          sendMessageToPlayers(
+            JSON.stringify(getQuestionResults(game)),
+            game,
+            wss,
+          );
+          console.log("timer expired, send question results to all players");
+          proceedGame(game, wss);
+        }
+      }, timeLimit * 1000);
+    } else {
+      sendMessageToPlayers(JSON.stringify(finishGameMessage(game)), game, wss);
+    }
+  }, 2000);
+}
+
+function updateScore(game: Game) {
+  const { players } = game;
+  const sortedPlayersByTime = players
+    .filter((player) => player.answeredCorrectly)
+    .sort((a, b) => (b.answerTime || 0) - (a.answerTime || 0));
+  console.log("sorted by time", sortedPlayersByTime);
+  const resPlayers = players.map((player) => {
+    let earned = 0;
+    if (player.answeredCorrectly) {
+      const timeBonus = sortedPlayersByTime.findIndex(
+        (pl) => pl.index === player.index,
+      );
+      earned = timeBonus + 1;
+      player.score += earned;
+    } else {
+      player.score += earned;
+    }
+    return {
+      name: player.name,
+      answered: player.hasAnswered || false,
+      correct: player.answeredCorrectly || false,
+      pointsEarned: earned,
+      totalScore: player.score,
+    };
+  });
+  console.log("Updated Score", resPlayers);
+  return resPlayers;
 }

@@ -26,7 +26,7 @@ export const gamesStorage: GamesStorage = {
       playerAnswers: mapPlaceholder,
     };
     this.games.push(game);
-    console.log(this.games);
+    console.log("games list:", this.games);
     return game;
   },
   findGame(code: string) {

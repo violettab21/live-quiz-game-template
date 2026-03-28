@@ -14,6 +14,10 @@ import {
   sendMessageToPlayers,
   startGame,
   getQuestionResults,
+  isNextQuestionPresent,
+  getNextQuestion,
+  finishGameMessage,
+  proceedGame,
 } from "./messages/messages";
 import { usersStorage } from "./db/users";
 
@@ -30,7 +34,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
       case "reg": {
         const res = register(data, ws);
         ws.send(JSON.stringify(res));
-        console.log(usersStorage.users);
+        console.log("users list", usersStorage.users);
         break;
       }
       case "create_game": {
@@ -43,16 +47,22 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
         ws.send(JSON.stringify(getGameJoinedMessage(res)));
         if (res) {
           const game = res.game;
-          sendMessageToPlayers(
-            JSON.stringify(getPlayerJoinedMessage(res)),
-            game,
-            wss,
+          setTimeout(
+            () =>
+              sendMessageToPlayers(
+                JSON.stringify(getPlayerJoinedMessage(res)),
+                game,
+                wss,
+              ),
+            500,
           );
-          sendMessageToPlayers(
-            JSON.stringify(getUpdatePlayersMessage(res)),
-            game,
-            wss,
-          );
+          setTimeout(() => {
+            sendMessageToPlayers(
+              JSON.stringify(getUpdatePlayersMessage(res)),
+              game,
+              wss,
+            );
+          }, 500);
         }
 
         break;
@@ -78,6 +88,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
               console.log(
                 "timer expired, send question results to all players",
               );
+              proceedGame(game, wss);
             }
           }, timeLimitSec * 1000);
         }
@@ -90,6 +101,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
         if (gameId && game) {
           const res = processAnswer(data, ws);
           ws.send(JSON.stringify(res));
+
           if (checkAllPlayersAnswered(game)) {
             sendMessageToPlayers(
               JSON.stringify(getQuestionResults(game)),
@@ -98,6 +110,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
             );
             game.questionTimer?.close();
             console.log("timer reset");
+            proceedGame(game, wss);
           }
         }
         break;
