@@ -1,8 +1,8 @@
-import { BASIC_POINT } from "../constants/constants";
-import { gamesStorage } from "../db/games";
-import { playersStorage } from "../db/players";
-import { AnswerData, Game, ModifiedWebSocket } from "../types";
-import { getCurrentQuestion } from "./startGame";
+import { BASIC_POINT } from "../constants/constants.js";
+import { gamesStorage } from "../db/games.js";
+import { playersStorage } from "../db/players.js";
+import { AnswerData, Game, ModifiedWebSocket } from "../types.js";
+import { getCurrentQuestion } from "./startGame.js";
 
 export function processAnswer(data: AnswerData, ws: ModifiedWebSocket) {
   const { gameId, questionIndex, answerIndex } = data;

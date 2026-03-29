@@ -1,5 +1,5 @@
-import { gamesStorage } from "../db/games";
-import { CreateGameData } from "../types";
+import { gamesStorage } from "../db/games.js";
+import { CreateGameData } from "../types.js";
 
 export function createGame(data: CreateGameData, hostId: string | undefined) {
   if (!data.questions || !hostId) {

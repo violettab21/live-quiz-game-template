@@ -1,23 +1,23 @@
 import { IncomingMessage } from "http";
-import { gamesStorage } from "../db/games";
+import { gamesStorage } from "../db/games.js";
 import {
   CreateGameData,
   Game,
   JoinGameData,
   ModifiedWebSocket,
   RegData,
-} from "../types";
+} from "../types.js";
 import type { WebSocket, Server } from "ws";
-import { TIMEOUT_SOW_QUESTION_RESULTS } from "../constants/constants";
-import { register } from "./register";
-import { createGame } from "./createGame";
+import { TIMEOUT_SOW_QUESTION_RESULTS } from "../constants/constants.js";
+import { register } from "./register.js";
+import { createGame } from "./createGame.js";
 import {
   getGameJoinedMessage,
   getPlayerJoinedMessage,
   getUpdatePlayersMessage,
   joinGame,
-} from "./joinGame";
-import { getCurrentQuestion, startGame } from "./startGame";
+} from "./joinGame.js";
+import { getCurrentQuestion, startGame } from "./startGame.js";
 
 import {
   checkAllPlayersAnswered,
@@ -26,7 +26,7 @@ import {
   getQuestionResults,
   isNextQuestionPresent,
   processAnswer,
-} from "./answer";
+} from "./answer.js";
 
 export function handleRegisterMessage(data: RegData, ws: ModifiedWebSocket) {
   const res = register(data, ws);

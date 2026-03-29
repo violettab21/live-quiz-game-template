@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Game, Player, Question } from "../types";
+import { Game, Player, Question } from "../types.js";
 
 interface GamesStorage {
   games: Game[];

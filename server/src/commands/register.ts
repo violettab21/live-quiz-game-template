@@ -1,4 +1,4 @@
-import { usersStorage } from "../db/users";
+import { usersStorage } from "../db/users.js";
 import { ModifiedWebSocket, RegData, WSMessage } from "../types";
 
 export function register(data: RegData, ws: ModifiedWebSocket): WSMessage {

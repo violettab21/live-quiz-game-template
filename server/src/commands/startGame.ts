@@ -1,5 +1,5 @@
-import { gamesStorage } from "../db/games";
-import { Game, StartGameData } from "../types";
+import { gamesStorage } from "../db/games.js";
+import { Game, StartGameData } from "../types.js";
 
 export function startGame(data: StartGameData) {
   const { gameId } = data;

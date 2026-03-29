@@ -1,7 +1,7 @@
-import { gamesStorage } from "../db/games";
-import { playersStorage } from "../db/players";
-import { usersStorage } from "../db/users";
-import { Game, JoinGameData, ModifiedWebSocket } from "../types";
+import { gamesStorage } from "../db/games.js";
+import { playersStorage } from "../db/players.js";
+import { usersStorage } from "../db/users.js";
+import { Game, JoinGameData, ModifiedWebSocket } from "../types.js";
 
 export function joinGame(data: JoinGameData, ws: ModifiedWebSocket) {
   const { code } = data;
