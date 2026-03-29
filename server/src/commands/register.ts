@@ -18,7 +18,6 @@ export function register(data: RegData, ws: ModifiedWebSocket): WSMessage {
     if (usersStorage.checkUserPasswordMatch(name, password)) {
       existingUser.ws = ws;
       ws.userId = existingUser.index;
-      console.log("login");
       return {
         type: "reg",
         data: {
@@ -41,7 +40,6 @@ export function register(data: RegData, ws: ModifiedWebSocket): WSMessage {
   }
   const index = usersStorage.addNewUser(name, password, ws);
   ws.userId = index;
-  console.log("new user");
   return {
     type: "reg",
     data: {

@@ -60,9 +60,6 @@ export function getQuestionResults(game: Game) {
 }
 
 export function checkAllPlayersAnswered(game: Game) {
-  console.log("All answered");
-  console.log("game players", game.players);
-
   return game.players.find((player) => !player.hasAnswered) ? false : true;
 }
 
@@ -138,6 +135,5 @@ function updateScore(game: Game) {
       totalScore: player.score,
     };
   });
-  console.log("Updated Score", resPlayers);
   return resPlayers;
 }

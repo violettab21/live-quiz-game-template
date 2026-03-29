@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Game, ModifiedWebSocket, Player, Question } from "../types";
+import { Game, Player, Question } from "../types";
 
 interface GamesStorage {
   games: Game[];
@@ -27,7 +27,6 @@ export const gamesStorage: GamesStorage = {
       playerAnswers: mapPlaceholder,
     };
     this.games.push(game);
-    console.log("games list:", this.games);
     return game;
   },
   findGame(code: string) {

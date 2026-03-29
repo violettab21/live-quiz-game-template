@@ -1,6 +1,5 @@
 import { IncomingMessage } from "http";
 import { gamesStorage } from "../db/games";
-import { usersStorage } from "../db/users";
 import {
   CreateGameData,
   Game,
@@ -32,7 +31,6 @@ import {
 export function handleRegisterMessage(data: RegData, ws: ModifiedWebSocket) {
   const res = register(data, ws);
   ws.send(JSON.stringify(res));
-  console.log("users list", usersStorage.users);
 }
 
 export function handleCreateGameMessage(
@@ -52,34 +50,36 @@ export function handleJoinGameMessage(
   ws.send(JSON.stringify(getGameJoinedMessage(res)));
   if (res) {
     const game = res.game;
-    setTimeout(
-      () =>
-        sendMessageToPlayers(
-          JSON.stringify(getPlayerJoinedMessage(res)),
-          game,
-          wss,
-        ),
-      500,
-    );
+    setTimeout(() => {
+      sendMessageToPlayers(
+        JSON.stringify(getPlayerJoinedMessage(res)),
+        game,
+        wss,
+      );
+    }, 200);
     setTimeout(() => {
       sendMessageToPlayers(
         JSON.stringify(getUpdatePlayersMessage(res.game)),
         game,
         wss,
       );
-    }, 500);
+    }, 200);
   }
 }
 
 export function handleStartGameMessage(
   data: any,
+  ws: ModifiedWebSocket,
   wss: Server<typeof WebSocket, typeof IncomingMessage>,
 ) {
+  const res = startGame(data);
+  if ("error" in res.data && res.data.error) {
+    ws.send(JSON.stringify(res));
+  }
   if (typeof data === "object" && "gameId" in data) {
     const gameId = data?.gameId as string;
     const game = gamesStorage.findGameById(gameId);
     if (game) {
-      const res = startGame(data);
       const {
         data: { timeLimitSec },
       } = getCurrentQuestion(game);
@@ -99,7 +99,6 @@ export function sendQuestionToPlayers(
   game.questionTimer = setTimeout(() => {
     {
       sendMessageToPlayers(JSON.stringify(getQuestionResults(game)), game, wss);
-      console.log("timer expired, send question results to all players");
       proceedGame(game, wss);
     }
   }, timeLimitSec * 1000);
@@ -112,14 +111,12 @@ export function handleAnswerMessage(
 ) {
   const gameId = data.gameId;
   const game = gamesStorage.findGameById(gameId);
+  const res = processAnswer(data, ws);
+  ws.send(JSON.stringify(res));
   if (gameId && game) {
-    const res = processAnswer(data, ws);
-    ws.send(JSON.stringify(res));
-
     if (checkAllPlayersAnswered(game)) {
       sendMessageToPlayers(JSON.stringify(getQuestionResults(game)), game, wss);
       game.questionTimer?.close();
-      console.log("timer reset");
       proceedGame(game, wss);
     }
   }
@@ -134,14 +131,10 @@ export function sendMessageToPlayers(
     const userIndex = client.userId;
     if (userIndex === game.hostId) {
       client.send(message);
-      console.log("send message to Host");
-      console.log(message);
     }
     game.players.forEach((player) => {
       if (player.index === client.userId) {
         client.send(message);
-        console.log("send message to player");
-        console.log(message);
       }
     });
   });
@@ -179,8 +172,6 @@ export function removeDisconnectedUserFromGames(
   if (games.length > 0) {
     games.forEach((game) => {
       gamesStorage.removePlayer(game.id, userId);
-      console.log("After remove");
-      console.log(gamesStorage.findGameById(game.id));
       const message = JSON.stringify(getUpdatePlayersMessage(game));
       sendMessageToPlayers(message, game, wss);
     });

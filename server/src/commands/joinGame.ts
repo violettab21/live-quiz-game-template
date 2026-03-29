@@ -5,9 +5,7 @@ import { Game, JoinGameData, ModifiedWebSocket } from "../types";
 
 export function joinGame(data: JoinGameData, ws: ModifiedWebSocket) {
   const { code } = data;
-  console.log("Game code", code);
   const game = gamesStorage.findGame(code);
-  console.log("current game", game);
   if (game) {
     const userIndex = ws.userId;
     if (userIndex) {

@@ -32,7 +32,7 @@ wss.on("connection", (ws: ModifiedWebSocket) => {
         break;
       }
       case "start_game": {
-        handleStartGameMessage(data, wss);
+        handleStartGameMessage(data, ws, wss);
 
         break;
       }

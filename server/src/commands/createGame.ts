@@ -7,7 +7,7 @@ export function createGame(data: CreateGameData, hostId: string | undefined) {
       type: "game_created",
       data: {
         error: true,
-        errorText: "Unable to create game user",
+        errorText: "Unable to create game",
       },
       id: 0,
     };
