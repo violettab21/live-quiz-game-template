@@ -117,16 +117,10 @@ function updateScore(game: Game) {
     let earned = 0;
     if (player.answeredCorrectly && player.answerTime) {
       const basePoints = BASIC_POINT;
-      const timeBonus = Number(
-        (
-          basePoints *
-          ((timeLimit - player.answerTime / 1000) / timeLimit)
-        ).toFixed(1),
-      );
-
-      earned = timeBonus + basePoints;
+      const timeBonus = (timeLimit - player.answerTime / 1000) / timeLimit;
+      earned = Math.round(timeBonus * basePoints);
     }
-    player.score = Number((player.score + earned).toFixed(1));
+    player.score += earned;
     return {
       name: player.name,
       answered: player.hasAnswered || false,
